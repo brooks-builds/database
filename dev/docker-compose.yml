@@ -1,25 +1,31 @@
-version: '3.8'
+version: '3.6'
 services:
   postgres:
-    expose:
-      - "5432"
-    image: postgres:latest
-    ports:
-      - "5432"
-    environment:
-      POSTGRES_PASSWORD: keyboardcat
+    image: postgres:12
+    restart: always
     volumes:
-      - "data:/var/lib/postgresql/data"
-      - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
-  hasura:
-    image: hasura/graphql-engine:latest
-    ports:
-      - "8000:8080"
+    - db_data:/var/lib/postgresql/data
+    - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
     environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:keyboardcat@postgres:5432/postgres
-      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
-      HASURA_GRAPHQL_ADMIN_SECRET: keyboardxilbe
+      POSTGRES_PASSWORD: postgrespassword
+  graphql-engine:
+    image: hasura/graphql-engine:v2.6.2
+    ports:
+    - "8080:8080"
     depends_on:
-      - postgres
+    - "postgres"
+    restart: always
+    environment:
+      ## postgres database to store Hasura metadata
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/postgres
+      ## this env var can be used to add the above postgres database to Hasura as a data source. this can be removed/updated based on your needs
+      PG_DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/postgres
+      ## enable the console served by server
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
+      ## enable debugging mode. It is recommended to disable this in production
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      ## uncomment next line to set an admin secret
+      # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
 volumes:
-  data:
+  db_data:
